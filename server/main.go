@@ -17,7 +17,7 @@ func main() {
 	flag.Parse()
 
 	config := &Config{port: port}
-	_, err := NewNode(config)
+	_, err := CreateNode(config)
 	if err != nil {
 		panic(err)
 	}

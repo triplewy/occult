@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package occult;
+
+service Occult {
+  rpc ConnectRPC(EmptyMsg) returns (CausalTsMsg);
+  rpc WriteRPC(WriteMsg) returns (ShardTsMsg);
+  rpc ReadRPC(ReadMsg) returns (EntryMsg);
+  rpc ReplicateRPC(ReplicateMsg) returns (EmptyMsg);
+}
+
+message EmptyMsg {}
+
+message CausalTsMsg { uint64 shardstamp = 1; }
+message ShardTsMsg { uint64 shardstamp = 1; }
+
+message WriteMsg {
+  string key = 1;
+  bytes value = 2;
+  uint64 deps = 3;
+}
+
+message ReadMsg { string key = 1; }
+
+message EntryMsg {
+  bytes value = 1;
+  uint64 deps = 2;
+  uint64 shardstamp = 3;
+}
+
+message ReplicateMsg {
+  string key = 1;
+  bytes value = 2;
+  uint64 deps = 3;
+  uint64 shardstamp = 4;
+}
+
+message RemoteNodeMsg {
+    string addr = 1;
+}
