@@ -20,22 +20,19 @@ func TestSimpleCluster(t *testing.T) {
 		follower = nodes[0]
 	}
 
-	connectReply, err := leader.ConnectRPC(context.Background(), &pb.EmptyMsg{})
-	if err != nil {
-		t.Fatalf("%v\n", err)
-	}
-	causalTs := connectReply.Shardstamp
-
-	writeReply, err := leader.WriteRPC(context.Background(), &pb.WriteMsg{
+	writeReply, err := leader.InsertRPC(context.Background(), &pb.WriteMsg{
 		Key:   "test",
 		Value: []byte("value"),
-		Deps:  causalTs,
+		Deps:  0,
 	})
-	causalTs = max(causalTs, writeReply.Shardstamp)
 
-	readReply, err := follower.ReadRPC(context.Background(), &pb.ReadMsg{Key: "test"})
+	ts := writeReply.Shardstamp
+
+	readReply, err := follower.ReadRPC(context.Background(), &pb.KeyMsg{Key: "test"})
 	if err != nil {
 		t.Fatalf("%v\n", err)
 	}
+
+	fmt.Println(ts)
 	fmt.Println(readReply)
 }

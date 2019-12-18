@@ -6,27 +6,69 @@ import (
 	pb "github.com/triplewy/occult/proto"
 )
 
-func (node *Node) ConnectRPC(ctx context.Context, msg *pb.EmptyMsg) (*pb.CausalTsMsg, error) {
-	node.shardstampLock.RLock()
-	shardstamp := node.shardstamp
-	node.shardstampLock.RUnlock()
-
-	return &pb.CausalTsMsg{Shardstamp: shardstamp}, nil
-}
-
-func (node *Node) WriteRPC(ctx context.Context, msg *pb.WriteMsg) (*pb.ShardTsMsg, error) {
+func (node *Node) InsertRPC(ctx context.Context, msg *pb.WriteMsg) (*pb.ShardTsMsg, error) {
 	if node.State != Leader {
 		return nil, ErrNotLeader
 	}
-	entry := NewEntry(msg.Key, msg.Value, msg.Deps)
-	shardstamp, err := node.apply(entry)
+	_, _, err := node.fsm.Read(msg.Key)
+	if err == nil {
+		return nil, ErrKeyExists
+	}
+	if err != ErrKeyNotFound {
+		return nil, err
+	}
+	log := &Log{
+		Command: pb.Command_Insert,
+		Key:     msg.Key,
+		Value:   msg.Value,
+		Deps:    msg.Deps,
+	}
+	shardstamp, err := node.Apply(log)
 	if err != nil {
 		return nil, err
 	}
 	return &pb.ShardTsMsg{Shardstamp: shardstamp}, nil
 }
 
-func (node *Node) ReadRPC(ctx context.Context, msg *pb.ReadMsg) (*pb.EntryMsg, error) {
+func (node *Node) UpdateRPC(ctx context.Context, msg *pb.WriteMsg) (*pb.ShardTsMsg, error) {
+	if node.State != Leader {
+		return nil, ErrNotLeader
+	}
+	_, _, err := node.fsm.Read(msg.Key)
+	if err != nil {
+		return nil, err
+	}
+	log := &Log{
+		Command: pb.Command_Update,
+		Key:     msg.Key,
+		Value:   msg.Value,
+		Deps:    msg.Deps,
+	}
+	shardstamp, err := node.Apply(log)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.ShardTsMsg{Shardstamp: shardstamp}, nil
+}
+
+func (node *Node) DeleteRPC(ctx context.Context, msg *pb.KeyMsg) (*pb.ShardTsMsg, error) {
+	if node.State != Leader {
+		return nil, ErrNotLeader
+	}
+	log := &Log{
+		Command: pb.Command_Delete,
+		Key:     msg.Key,
+		Value:   nil,
+		Deps:    0,
+	}
+	shardstamp, err := node.Apply(log)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.ShardTsMsg{Shardstamp: shardstamp}, nil
+}
+
+func (node *Node) ReadRPC(ctx context.Context, msg *pb.KeyMsg) (*pb.EntryMsg, error) {
 	node.shardstampLock.RLock()
 	shardstamp := node.shardstamp
 	node.shardstampLock.RUnlock()
@@ -47,7 +89,12 @@ func (node *Node) ReplicateRPC(ctx context.Context, msg *pb.ReplicateMsg) (*pb.E
 	node.shardstamp = msg.Shardstamp
 	node.shardstampLock.Unlock()
 
-	entry := NewEntry(msg.Key, msg.Value, msg.Deps)
-	_, err := node.apply(entry)
+	log := &Log{
+		Command: msg.Command,
+		Key:     msg.Key,
+		Value:   msg.Value,
+		Deps:    msg.Deps,
+	}
+	_, err := node.Apply(log)
 	return &pb.EmptyMsg{}, err
 }

@@ -6,12 +6,12 @@ func (node *Node) runFollower() stateFunction {
 	fmt.Println("Running follower")
 	for {
 		select {
-		case entry := <-node.applyChan:
-			err := node.fsm.Apply(entry)
+		case f := <-node.applyChan:
+			err := node.fsm.Apply(f.log)
 			if err != nil {
-				entry.errChan <- err
+				f.errChan <- err
 			} else {
-				entry.resChan <- 0
+				f.resChan <- 0
 			}
 		case <-node.watch:
 			err := node.checkZk()

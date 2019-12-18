@@ -2,50 +2,78 @@ package main
 
 import (
 	"errors"
-	"flag"
-	"fmt"
 	"log"
 
 	"github.com/abiosoft/ishell"
 )
 
-var port int
-
-func init() {
-	flag.IntVar(&port, "c", 50000, "connect to node")
-}
-
-func printHelp(shell *ishell.Shell) {
-	shell.Println("Commands:")
-	shell.Println(" - help                    Prints this help message")
-	shell.Println(" - read <key>		      Read")
-	shell.Println(" - write <key> <value>     Write")
-	shell.Println(" - delete <key>            Delete")
-	shell.Println(" - exit                    Exit CLI")
-}
-
 func main() {
-	flag.Parse()
-
-	client, err := CreateClient(&Config{Addr: fmt.Sprintf("localhost:%d", port)})
+	client, err := CreateClient()
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	shell := ishell.New()
-	printHelp(shell)
 
 	shell.AddCmd(&ishell.Cmd{
-		Name: "help",
-		Help: "print help",
+		Name: "insert",
+		Help: "insert <key> <value>",
 		Func: func(c *ishell.Context) {
-			printHelp(shell)
+			if len(c.Args) != 2 {
+				c.Err(errors.New("Args should be length 2"))
+				return
+			}
+			key := c.Args[0]
+			value := []byte(c.Args[1])
+			err := client.Write(key, value)
+			if err != nil {
+				c.Err(err)
+				return
+			}
+			c.Println("Success")
+		},
+	})
+
+	shell.AddCmd(&ishell.Cmd{
+		Name: "update",
+		Help: "update <key> <value>",
+		Func: func(c *ishell.Context) {
+			if len(c.Args) != 2 {
+				c.Err(errors.New("Args should be length 2"))
+				return
+			}
+			key := c.Args[0]
+			value := []byte(c.Args[1])
+			err := client.Update(key, value)
+			if err != nil {
+				c.Err(err)
+				return
+			}
+			c.Println("Success")
+		},
+	})
+
+	shell.AddCmd(&ishell.Cmd{
+		Name: "delete",
+		Help: "delete <key>",
+		Func: func(c *ishell.Context) {
+			if len(c.Args) != 1 {
+				c.Err(errors.New("Args should be length 1"))
+				return
+			}
+			key := c.Args[0]
+			err := client.Delete(key)
+			if err != nil {
+				c.Err(err)
+				return
+			}
+			c.Println("Success")
 		},
 	})
 
 	shell.AddCmd(&ishell.Cmd{
 		Name: "read",
-		Help: "read key",
+		Help: "read <key>",
 		Func: func(c *ishell.Context) {
 			if len(c.Args) != 1 {
 				c.Err(errors.New("Args should be length 1"))
@@ -57,7 +85,15 @@ func main() {
 				c.Err(err)
 				return
 			}
-			c.Printf("Key: %v, Value: %v", key, string(value))
+			c.Printf("Key: %v, Value: %v\n", key, string(value))
+		},
+	})
+
+	shell.AddCmd(&ishell.Cmd{
+		Name: "timestamp",
+		Help: "client causal timestamp",
+		Func: func(c *ishell.Context) {
+			c.Println(client.Timestamp)
 		},
 	})
 
@@ -69,5 +105,5 @@ func main() {
 		},
 	})
 
-	shell.Start()
+	shell.Run()
 }

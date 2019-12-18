@@ -3,15 +3,15 @@ syntax = "proto3";
 package occult;
 
 service Occult {
-  rpc ConnectRPC(EmptyMsg) returns (CausalTsMsg);
-  rpc WriteRPC(WriteMsg) returns (ShardTsMsg);
-  rpc ReadRPC(ReadMsg) returns (EntryMsg);
+  rpc InsertRPC(WriteMsg) returns (ShardTsMsg);
+  rpc UpdateRPC(WriteMsg) returns (ShardTsMsg);
+  rpc ReadRPC(KeyMsg) returns (EntryMsg);
+  rpc DeleteRPC(KeyMsg) returns (ShardTsMsg);
   rpc ReplicateRPC(ReplicateMsg) returns (EmptyMsg);
 }
 
 message EmptyMsg {}
 
-message CausalTsMsg { uint64 shardstamp = 1; }
 message ShardTsMsg { uint64 shardstamp = 1; }
 
 message WriteMsg {
@@ -20,7 +20,7 @@ message WriteMsg {
   uint64 deps = 3;
 }
 
-message ReadMsg { string key = 1; }
+message KeyMsg { string key = 1; }
 
 message EntryMsg {
   bytes value = 1;
@@ -28,13 +28,16 @@ message EntryMsg {
   uint64 shardstamp = 3;
 }
 
-message ReplicateMsg {
-  string key = 1;
-  bytes value = 2;
-  uint64 deps = 3;
-  uint64 shardstamp = 4;
+enum Command {
+  Insert = 0;
+  Update = 1;
+  Delete = 2;
 }
 
-message RemoteNodeMsg {
-    string addr = 1;
+message ReplicateMsg {
+  Command command = 1;
+  string key = 2;
+  bytes value = 3;
+  uint64 deps = 4;
+  uint64 shardstamp = 5;
 }

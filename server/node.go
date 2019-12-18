@@ -34,7 +34,7 @@ type Node struct {
 	State  NodeState
 
 	server *grpc.Server
-	fsm    FSM
+	fsm    *InmemFSM
 
 	addr  string
 	nodes map[string]*RemoteNode
@@ -46,7 +46,7 @@ type Node struct {
 	zk    *zk.Conn
 	watch <-chan zk.Event
 
-	applyChan chan *Entry
+	applyChan chan *ApplyFuture
 }
 
 // CreateNode creates a new node
@@ -56,7 +56,7 @@ func CreateNode(config *Config) (*Node, error) {
 		fsm:       NewInmemFSM(),
 		addr:      "localhost:" + strconv.Itoa(config.port),
 		nodes:     make(map[string]*RemoteNode),
-		applyChan: make(chan *Entry),
+		applyChan: make(chan *ApplyFuture),
 	}
 
 	err := node.setupRPC()
@@ -119,7 +119,12 @@ func (node *Node) run() {
 	}
 }
 
-func (node *Node) apply(entry *Entry) (shardstamp uint64, err error) {
-	node.applyChan <- entry
-	return entry.Response()
+func (node *Node) Apply(log *Log) (shardstamp uint64, err error) {
+	f := &ApplyFuture{
+		log:     log,
+		resChan: make(chan uint64, 1),
+		errChan: make(chan error, 1),
+	}
+	node.applyChan <- f
+	return f.Response()
 }

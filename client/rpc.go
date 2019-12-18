@@ -67,19 +67,54 @@ func (remote *RemoteNode) connCheck(err error) error {
 	return err
 }
 
-// ConnectRPC is used by leader to replicate entries to followers
-func (remote *RemoteNode) ConnectRPC(key string, value []byte, deps uint64, shardstamp uint64) error {
+func (remote *RemoteNode) InsertRPC(key string, value []byte, deps uint64) (*pb.ShardTsMsg, error) {
 	cc, err := remote.ClientConn()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	_, err = cc.ConnectRPC(context.Background(), &pb.EmptyMsg{})
+	reply, err := cc.InsertRPC(context.Background(), &pb.WriteMsg{
+		Key:   key,
+		Value: value,
+		Deps:  deps,
+	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return remote.connCheck(err)
+	return reply, remote.connCheck(err)
+}
+
+func (remote *RemoteNode) UpdateRPC(key string, value []byte, deps uint64) (*pb.ShardTsMsg, error) {
+	cc, err := remote.ClientConn()
+	if err != nil {
+		return nil, err
+	}
+
+	reply, err := cc.UpdateRPC(context.Background(), &pb.WriteMsg{
+		Key:   key,
+		Value: value,
+		Deps:  deps,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return reply, remote.connCheck(err)
+}
+
+func (remote *RemoteNode) DeleteRPC(key string) (*pb.ShardTsMsg, error) {
+	cc, err := remote.ClientConn()
+	if err != nil {
+		return nil, err
+	}
+
+	reply, err := cc.DeleteRPC(context.Background(), &pb.KeyMsg{Key: key})
+	if err != nil {
+		return nil, err
+	}
+
+	return reply, remote.connCheck(err)
 }
 
 // ConnectRPC is used by leader to replicate entries to followers
@@ -89,7 +124,7 @@ func (remote *RemoteNode) ReadRPC(key string) (*pb.EntryMsg, error) {
 		return nil, err
 	}
 
-	reply, err := cc.ReadRPC(context.Background(), &pb.ReadMsg{Key: key})
+	reply, err := cc.ReadRPC(context.Background(), &pb.KeyMsg{Key: key})
 	if err != nil {
 		return nil, err
 	}
