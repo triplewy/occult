@@ -25,7 +25,9 @@ func TestSimpleCluster(t *testing.T) {
 		Value: []byte("value"),
 		Deps:  0,
 	})
-
+	if err != nil {
+		t.Fatalf("%v\n", err)
+	}
 	ts := writeReply.Shardstamp
 
 	readReply, err := follower.ReadRPC(context.Background(), &pb.KeyMsg{Key: "test"})

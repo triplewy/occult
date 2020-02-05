@@ -25,6 +25,7 @@ func (node *Node) checkZk() error {
 	if err != nil {
 		return err
 	}
+
 	// Set watch to children in case if leader
 	node.watch = watch
 

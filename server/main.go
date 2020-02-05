@@ -5,6 +5,8 @@ import (
 	"log"
 	"os"
 	"os/signal"
+
+	"github.com/brown-csci1380/ta-impl-s20/liteminer/liteminer"
 )
 
 var port int
@@ -15,6 +17,8 @@ func init() {
 
 func main() {
 	flag.Parse()
+
+	liteminer.BusyPoolMsg()
 
 	config := &Config{port: port}
 	_, err := CreateNode(config)
