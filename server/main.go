@@ -6,7 +6,7 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/brown-csci1380/ta-impl-s20/liteminer/liteminer"
+	raft "github.com/triplewy/raft/src"
 )
 
 var port int
@@ -18,7 +18,7 @@ func init() {
 func main() {
 	flag.Parse()
 
-	liteminer.BusyPoolMsg()
+	raft.GetOutboundIP()
 
 	config := &Config{port: port}
 	_, err := CreateNode(config)
